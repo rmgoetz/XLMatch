@@ -11,10 +11,28 @@ import pandas as pd
 from pandas import ExcelFile
 
 
+#
+# The script inputs
+#-----------------------------------------------------------------------------
 file1 = input('Enter first file name:')
 file2 = input('Enter second file name:')
+#ignore_sheet_numbers_Q = input('Ignore sheet number mismatch (Y/N):')
+ignore_sheet_names_Q = input('Ignore sheet name mismatch (Y/N):')
+#if ignore_sheet_numbers_Q == ('Y' or 'y'):
+#    ignore_sheet_numbers = True
+#else:
+#    ignore_sheet_numbers = False
+if ignore_sheet_names_Q == ('Y' or 'y'):
+    ignore_sheet_names = True
+else:
+    ignore_sheet_names = False
+#-----------------------------------------------------------------------------
+#
 
 
+#
+# Try to read the input files
+#-----------------------------------------------------------------------------
 try:
     ex1 = ExcelFile(file1)
 except:
@@ -25,21 +43,36 @@ try:
 except:
     print('Second file not found')
     sys.exit( )
+#-----------------------------------------------------------------------------
+#
     
 
+#
+# Sort filenames, remove extensions where needed, open report file
+#-----------------------------------------------------------------------------
 f1_dot = file1[::-1].find('.')+1
 f2_dot = file2[::-1].find('.')+1
 name_sort = sorted((file1,file2))    
 errfile_name = 'match_report_'+name_sort[0][:-f1_dot]+'_'+name_sort[1][:-f2_dot]+'.txt'
 errfile = open(errfile_name,'w')
 err_out = 'File 1: '+name_sort[0]+'\n'+'File 2: '+name_sort[1]+'\n'
+#-----------------------------------------------------------------------------
+#
 
 
+#
+# The test-passing variables
+#-----------------------------------------------------------------------------
 sheet_test = True
 shape_test = True
 cell_test = True
+#-----------------------------------------------------------------------------
+#
 
 
+#
+# Define goodbye function and converter from index to Excel column header
+#-----------------------------------------------------------------------------
 def goodbye():
     if sheet_test*shape_test*cell_test:
         print('No mismatches found')
@@ -60,29 +93,61 @@ def letter(idx):
         IDX = IDX//26
         rvlet += alph[IDX % 26 - 1]
     return rvlet[::-1]
+#-----------------------------------------------------------------------------
+#
 
-  
-if len(ex1.sheet_names)!=len(ex2.sheet_names):
+
+#
+# Check number of sheets
+#-----------------------------------------------------------------------------
+length1 = len(ex1.sheet_names)
+length2 = len(ex2.sheet_names)
+if length1 != length2:
     err_out += 'Sheet number mismatch\n'
+    err_out += 'No further match testing is possible until this issue is resolved\n'
     goodbye()
 else:
     err_out += 'Number of sheets match\n'
     
+# --- when I want to try ignore sheet numbers:    
+#    #if not ignore_sheet_numbers:
+#    #    err_out += 'No further match testing is possible until this issue is resolved\n'
+#    #    goodbye()
+#    #else:
+#    #    min_sheet = min([length1,length2])
+#    #    min_index = [length1,length2].index(min_sheet) # this might be an issue for certain python versions
+#    #    
+#    #    err_out += 'File 1 will serve as sheet number reference'
 
+#-----------------------------------------------------------------------------
+#
+    
+
+#
+# Check names of sheets
+#-----------------------------------------------------------------------------
 for a,b in zip(ex1.sheet_names,ex2.sheet_names):
     sheet_test &= (a==b)
 if not sheet_test:
     err_out += 'Sheet names or order are mismatched\n'
-    err_out += 'No further match testing is possible until this issue is resolved\n'
-    goodbye()
+    if not ignore_sheet_names:
+        err_out += 'No further match testing is possible until this issue is resolved\n'
+        goodbye()
+    else:
+        err_out += 'File 1 will serve as sheet name reference\n'
 else:
     err_out += 'Sheet names and orders are matched\n'
+#-----------------------------------------------------------------------------
+#
 
 
+#
+# Check sheet shapes
+#-----------------------------------------------------------------------------
 sheet_names = ex1.sheet_names
-for sht in sheet_names:
-    df1 = pd.read_excel(file1,sheet_name=sht,header=None)
-    df2 = pd.read_excel(file2,sheet_name=sht,header=None)
+for ind,sht in enumerate(sheet_names):
+    df1 = pd.read_excel(file1,sheet_name=ind,header=None)
+    df2 = pd.read_excel(file2,sheet_name=ind,header=None)
     EQ = np.shape(df1) == np.shape(df2)
     shape_test &= EQ
     if not EQ:
@@ -94,11 +159,16 @@ for sht in sheet_names:
 if not shape_test:
     err_out += 'Files not compared cell-by-cell due to sheet shape mismatch\n'        
     goodbye()
+#-----------------------------------------------------------------------------
+#
     
 
-for sht in sheet_names:
-    df1 = pd.read_excel(file1,sheet_name=sht,header=None)
-    df2 = pd.read_excel(file2,sheet_name=sht,header=None)
+#
+# 
+#-----------------------------------------------------------------------------
+for ind,sht in enumerate(sheet_names):
+    df1 = pd.read_excel(file1,sheet_name=ind,header=None)
+    df2 = pd.read_excel(file2,sheet_name=ind,header=None)
     df1 = df1.astype('str')
     df2 = df2.astype('str')
     EQ = df1.equals(df2)
@@ -118,6 +188,13 @@ for sht in sheet_names:
             err_out += sames.loc[i].str.cat()
     else:
         err_out += 'All cells in sheet named '+sht+' match\n'
+#-----------------------------------------------------------------------------
+#
                 
-    
+   
+#
+# Goodbye if we haven't already
+#-----------------------------------------------------------------------------    
 goodbye()
+#-----------------------------------------------------------------------------
+#
