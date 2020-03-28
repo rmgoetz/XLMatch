@@ -71,7 +71,7 @@ cell_test = True
 
 
 #
-# Define goodbye function and converter from index to Excel column header
+# Define goodbye, index to cell converter, and shape fixing functions
 #-----------------------------------------------------------------------------
 def goodbye():
     if sheet_test*shape_test*cell_test:
@@ -93,6 +93,21 @@ def letter(idx):
         IDX = IDX//26
         rvlet += alph[IDX % 26 - 1]
     return rvlet[::-1]
+
+
+def shapefix(daf1,daf2):
+    shp1 = daf1.shape
+    shp2 = daf2.shape
+    if shp1 == shp2:
+        return daf1, daf2
+    else:
+        maxrow = max(shp1[0],shp2[0])
+        maxcol = max(shp1[1],shp2[1])
+        row_index = list(range(maxrow))
+        col_index = list(range(maxcol))
+        newdaf1 = daf1.reindex(index=row_index,columns=col_index)
+        newdaf2 = daf2.reindex(index=row_index,columns=col_index)
+        return newdaf1, newdaf2
 #-----------------------------------------------------------------------------
 #
 
@@ -142,38 +157,25 @@ else:
 
 
 #
-# Check sheet shapes
+# Check sheet shapes and then go cell-by-cell
 #-----------------------------------------------------------------------------
 sheet_names = ex1.sheet_names
 for ind,sht in enumerate(sheet_names):
     df1 = pd.read_excel(file1,sheet_name=ind,header=None)
     df2 = pd.read_excel(file2,sheet_name=ind,header=None)
-    EQ = np.shape(df1) == np.shape(df2)
-    shape_test &= EQ
-    if not EQ:
-        err_out += 'Shape of sheet named '+sht+' does not match\n'
-    else:
+    EQ1 = np.shape(df1) == np.shape(df2)
+    shape_test &= EQ1
+    if EQ1:
         err_out += 'Shape of sheet named '+sht+' matches\n'
-
         
-if not shape_test:
-    err_out += 'Files not compared cell-by-cell due to sheet shape mismatch\n'        
-    goodbye()
-#-----------------------------------------------------------------------------
-#
-    
-
-#
-# 
-#-----------------------------------------------------------------------------
-for ind,sht in enumerate(sheet_names):
-    df1 = pd.read_excel(file1,sheet_name=ind,header=None)
-    df2 = pd.read_excel(file2,sheet_name=ind,header=None)
+    else:
+        err_out += 'Shape of sheet named '+sht+' does not match\n'
+        df1, df2 = shapefix(df1,df2)
     df1 = df1.astype('str')
     df2 = df2.astype('str')
-    EQ = df1.equals(df2)
-    cell_test &= EQ
-    if not EQ:
+    EQ2 = df1.equals(df2)
+    cell_test &= EQ2
+    if not EQ2:
         err_out += 'In sheet named '+sht+' the following indices do not match:\n'
         (nrow,ncol) = np.shape(df1)
         indices = []
@@ -190,7 +192,7 @@ for ind,sht in enumerate(sheet_names):
         err_out += 'All cells in sheet named '+sht+' match\n'
 #-----------------------------------------------------------------------------
 #
-                
+                  
    
 #
 # Goodbye if we haven't already
