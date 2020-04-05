@@ -1,2 +1,2 @@
 # XLMatch
-Python scripts for comparing excel files
+Python script for comparing excel files
